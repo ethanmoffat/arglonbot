@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: arglonbot
+  labels:
+    app: arglonbot
+---
+apiVersion: v1
+kind: Secret
+type: 
+metadata:
+  name: botkey
+  labels:
+    app: arglonbot
+  namespace: arglonbot
+data:
+  token: {not_so_fast}
+---
+apiVersion: v1
+kind: Secret
+type: kubernetes.io/dockerconfigjson
+metadata:
+  name: regcred
+  namespace: arglonbot
+data:
+  .dockerconfigjson: {pls_no_hax}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: arglonbot-deploy
+  labels:
+    app: arglonbot
+  namespace: arglonbot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: arglonbot
+  template:
+    metadata:
+      labels:
+        app: arglonbot
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: arglonbot
+          image: moffat.azurecr.io/arglonbot:latest
+          imagePullPolicy: Always
+          env:
+            - name: bottoken
+              valueFrom:
+                secretKeyRef:
+                  name: botkey
+                  key: token
+      imagePullSecrets:
+        - name: regcred
