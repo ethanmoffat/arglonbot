@@ -2,6 +2,9 @@
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
+using var cts = new CancellationTokenSource();
+Console.CancelKeyPress += Console_CancelKeyPress;
+
 DiscordClient? discordClient = null;
 
 try
@@ -12,7 +15,7 @@ try
             Token = Environment.GetEnvironmentVariable("bottoken"),
             TokenType = TokenType.Bot,
             AutoReconnect = true,
-            MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Information
+            MinimumLogLevel = Microsoft.Extensions.Logging.LogLevel.Debug
         }
     );
     await discordClient.ConnectAsync();
@@ -20,7 +23,19 @@ try
     var slash = discordClient!.UseSlashCommands();
     slash.RegisterCommands<SlashCommands>();
 
-    await Task.Delay(-1);
+    var firstPeriod = (DateTime.Now.Hour < 7
+        ? DateTime.Now.Date.AddHours(7)
+        : DateTime.Now.Date.AddDays(1).AddHours(7)) - DateTime.Now;
+
+    using var firstPeriodTimer = new PeriodicTimer(firstPeriod);
+    await PeriodicOpenMouth(firstPeriodTimer, repeat: false);
+
+    using var repeatTimer = new PeriodicTimer(TimeSpan.FromHours(24));
+    await PeriodicOpenMouth(repeatTimer, repeat: true);
+}
+catch
+{
+    cts.Cancel();
 }
 finally
 {
@@ -29,6 +44,30 @@ finally
         await discordClient.DisconnectAsync();
         discordClient.Dispose();
     }
+}
+
+async Task PeriodicOpenMouth(PeriodicTimer timer, bool repeat)
+{
+    const ulong Guild_404_ID = 723989119503696013;
+    const ulong Channel_Lounge_ID = 787685796055482368;
+
+    while (await timer.WaitForNextTickAsync(cts.Token))
+    {
+        var guild = await discordClient.GetGuildAsync(Guild_404_ID);
+        if (!guild.Channels.TryGetValue(Channel_Lounge_ID, out var channel))
+            continue;
+
+        await channel.SendMessageAsync("Good morning 😮");
+
+        if (!repeat)
+            break;
+    }
+}
+
+void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
+{
+    e.Cancel = true;
+    cts.Cancel();
 }
 
 public class SlashCommands : ApplicationCommandModule
@@ -81,9 +120,7 @@ public class SlashCommands : ApplicationCommandModule
     }
 
     [SlashCommand("post", "Classic Arglon.")]
-    public async Task Post(
-        InteractionContext ctx,
-        [Option("channel", "The channel in which to post.")]DiscordChannel channel)
+    public async Task Post(InteractionContext ctx)
     {
         await ctx.CreateResponseAsync(
             InteractionResponseType.ChannelMessageWithSource,
@@ -93,7 +130,7 @@ public class SlashCommands : ApplicationCommandModule
 
     private static async Task<DiscordMessage?> GetMostRecentMessageFor(InteractionContext ctx, DiscordUser user)
     {
-        var messages = await ctx.Channel.GetMessagesAsync(1000).ConfigureAwait(false);
+        var messages = await ctx.Channel.GetMessagesAsync().ConfigureAwait(false);
         return messages.OrderByDescending(x => x.Timestamp)
             .FirstOrDefault(x => x.Author.Equals(user));
     }
