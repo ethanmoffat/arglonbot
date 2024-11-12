@@ -24,7 +24,7 @@ try
     slash.RegisterCommands<SlashCommands>();
 
     var zoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
-    var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zoneInfo);
+    var now = Now();
     var firstPeriod = (now.Hour < 8
         ? now.Date.AddHours(8)
         : now.Date.AddDays(1).AddHours(8)) - now;
@@ -59,7 +59,7 @@ async Task PeriodicOpenMouth(PeriodicTimer timer, bool repeat)
         if (!guild.Channels.TryGetValue(Channel_Lounge_ID, out var channel))
             continue;
 
-        await channel.SendMessageAsync("Good morning 😮");
+        await channel.SendMessageAsync(Message());
 
         if (!repeat)
             break;
@@ -70,6 +70,19 @@ void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
 {
     e.Cancel = true;
     cts.Cancel();
+}
+
+string Message() => Now() switch
+{
+    { Month: 12, Day: 24 } now => "Happy christmas eve 🎅🏻",
+    { Month: 12, Day: 25 } => "Happy christmas 🎅🏻",
+    _ => "Good morning 😮"
+};
+
+DateTime Now()
+{
+    var zoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
+    return TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zoneInfo);
 }
 
 public class SlashCommands : ApplicationCommandModule
