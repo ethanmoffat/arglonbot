@@ -23,9 +23,11 @@ try
     var slash = discordClient!.UseSlashCommands();
     slash.RegisterCommands<SlashCommands>();
 
-    var firstPeriod = (DateTime.Now.Hour < 7
-        ? DateTime.Now.Date.AddHours(7)
-        : DateTime.Now.Date.AddDays(1).AddHours(7)) - DateTime.Now;
+    var zoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
+    var now = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zoneInfo);
+    var firstPeriod = (now.Hour < 8
+        ? now.Date.AddHours(8)
+        : now.Date.AddDays(1).AddHours(8)) - now;
 
     using var firstPeriodTimer = new PeriodicTimer(firstPeriod);
     await PeriodicOpenMouth(firstPeriodTimer, repeat: false);
