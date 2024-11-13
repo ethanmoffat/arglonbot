@@ -23,7 +23,6 @@ try
     var slash = discordClient!.UseSlashCommands();
     slash.RegisterCommands<SlashCommands>();
 
-    var zoneInfo = TimeZoneInfo.FindSystemTimeZoneById("Pacific Standard Time");
     var now = Now();
     var firstPeriod = (now.Hour < 8
         ? now.Date.AddHours(8)
