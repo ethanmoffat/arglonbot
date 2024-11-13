@@ -73,8 +73,8 @@ void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
 
 string Message() => Now() switch
 {
-    { Month: 12, Day: 24 } now => "Happy christmas eve 🎅🏻",
-    { Month: 12, Day: 25 } => "Happy christmas 🎅🏻",
+    { Month: 12, Day: 24 } now => "Merry christmas eve 🎅🏻",
+    { Month: 12, Day: 25 } => "Merry christmas 🎅🏻",
     _ => "Good morning 😮"
 };
 
