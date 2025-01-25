@@ -50,15 +50,25 @@ finally
 async Task PeriodicOpenMouth(PeriodicTimer timer, bool repeat)
 {
     const ulong Guild_404_ID = 723989119503696013;
-    const ulong Channel_Lounge_ID = 787685796055482368;
+    const ulong EO_Mobile_ID = 1306039236407066736;
+    const ulong Guild_404_Channel_Lounge_ID = 787685796055482368;
+    const ulong EO_Mobile_Channel_General_ID = 1306039236931223614;
+
+    List<(ulong GuildId, ulong ChannelId)> guildChannelPairs = [
+        (Guild_404_ID, Guild_404_Channel_Lounge_ID),
+        (EO_Mobile_ID, EO_Mobile_Channel_General_ID)
+    ];
 
     while (await timer.WaitForNextTickAsync(cts.Token))
     {
-        var guild = await discordClient.GetGuildAsync(Guild_404_ID);
-        if (!guild.Channels.TryGetValue(Channel_Lounge_ID, out var channel))
-            continue;
+        foreach (var (guildId, channelId) in guildChannelPairs)
+        {
+            var guild = await discordClient.GetGuildAsync(guildId);
+            if (!guild.Channels.TryGetValue(channelId, out var channel))
+                continue;
 
-        await channel.SendMessageAsync(Message());
+            await channel.SendMessageAsync(Message());
+        }
 
         if (!repeat)
             break;
