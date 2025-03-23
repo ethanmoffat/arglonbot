@@ -85,6 +85,7 @@ string Message() => Now() switch
 {
     { Month: 12, Day: 24 } now => "Merry christmas eve 🎅🏻",
     { Month: 12, Day: 25 } => "Merry christmas 🎅🏻",
+    { Month: 10, Day: 31 } => "GooooOOOooooOd MoooOOrnniiinnNNngGGgg 👻😱",
     _ => "Good morning 😮"
 };
 
