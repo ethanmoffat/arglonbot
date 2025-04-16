@@ -83,9 +83,15 @@ void Console_CancelKeyPress(object? sender, ConsoleCancelEventArgs e)
 
 string Message() => Now() switch
 {
+    { Month: 1, Day: 1 } => "Happy new year 🥳",
+    { Month: 5, Day: >= 25 and <= 31, DayOfWeek: DayOfWeek.Monday } => "In loving memory of Arglon 😮 (and memorial day)",
+    { Month: 7, Day: 4 } => "Happy freedom day 'murica 🦅🇺🇸",
+    { Month: 9, Day: >= 1 and <= 7, DayOfWeek: DayOfWeek.Monday } => "Today we labour over projects that will never be finished 😮",
+    { Month: 10, Day: 31 } => "Happy halloween 👻",
+    { Month: 11, Day: >= 22 and <= 28, DayOfWeek: DayOfWeek.Thursday } => "Happy thanksgiving 😮🦃",
     { Month: 12, Day: 24 } now => "Merry christmas eve 🎅🏻",
     { Month: 12, Day: 25 } => "Merry christmas 🎅🏻",
-    { Month: 10, Day: 31 } => "GooooOOOooooOd MoooOOrnniiinnNNngGGgg 👻😱",
+    { Month: 12, Day: 31 } => "Happy new year's eve 😮",
     _ => "Good morning 😮"
 };
 
