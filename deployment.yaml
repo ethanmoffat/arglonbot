@@ -48,7 +48,7 @@ spec:
           image: moffat.azurecr.io/arglonbot:latest
           imagePullPolicy: Always
           env:
-            - name: bottoken
+            - name: ArglonBotSettings__BotToken
               valueFrom:
                 secretKeyRef:
                   name: botkey

@@ -23,6 +23,7 @@ public static class Program
 
             services.AddSingleton(CreateDiscordConfiguration);
             services.AddSingleton<DiscordClient>();
+            services.AddSingleton<IMessageSelector, MessageSelector>();
 
             services.AddHostedService<ArglonBot>();
         });
