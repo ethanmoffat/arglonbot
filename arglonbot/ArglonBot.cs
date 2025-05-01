@@ -14,18 +14,21 @@ public class ArglonBot : BackgroundService
 {
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private readonly DiscordClient _discordClient;
+    private readonly SlashCommandsConfiguration _slashCommandsConfiguration;
     private readonly IMessageSelector _messageSelector;
     private readonly IOptionsMonitor<ArglonBotConfiguration> _arglonBotConfiguration;
     private readonly ILogger<ArglonBot> _logger;
 
     public ArglonBot(IHostApplicationLifetime hostApplicationLifetime,
                      DiscordClient discordClient,
+                     SlashCommandsConfiguration slashCommandsConfiguration,
                      IMessageSelector messageSelector,
                      IOptionsMonitor<ArglonBotConfiguration> arglonBotConfiguration,
                      ILoggerFactory loggerFactory)
     {
         _hostApplicationLifetime = hostApplicationLifetime;
         _discordClient = discordClient;
+        _slashCommandsConfiguration = slashCommandsConfiguration;
         _messageSelector = messageSelector;
         _arglonBotConfiguration = arglonBotConfiguration;
         _logger = loggerFactory.CreateLogger<ArglonBot>();
@@ -37,7 +40,7 @@ public class ArglonBot : BackgroundService
         {
             await _discordClient.ConnectAsync();
 
-            var slash = _discordClient.UseSlashCommands();
+            var slash = _discordClient.UseSlashCommands(_slashCommandsConfiguration);
             slash.RegisterCommands<SlashCommands>();
 
             var settings = _arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings;

@@ -1,9 +1,18 @@
-﻿using DSharpPlus;
+﻿using arglonbot;
+
+using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
 public class SlashCommands : ApplicationCommandModule
 {
+    private readonly IMessageSelector _messageSelector;
+
+    public SlashCommands(IMessageSelector messageSelector)
+    {
+        _messageSelector = messageSelector;
+    }
+
     [SlashCommand("react", "Arglon will react appropriately to the specified user.")]
     public async Task React(
         InteractionContext ctx,
@@ -58,6 +67,27 @@ public class SlashCommands : ApplicationCommandModule
             InteractionResponseType.ChannelMessageWithSource,
             new DiscordInteractionResponseBuilder { Content = "😮" }
         );
+    }
+
+    [SlashCommand("holiday", "Arglon sends a holiday greeting")]
+    public async Task Holiday(
+        InteractionContext ctx,
+        [Option("date", "The date of the holiday")] string date)
+    {
+        if (!DateTime.TryParse(date, out var dateTime))
+        {
+            await ctx.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder { Content = $"`DateTime.TryParse` didn't like the input date {date}. Try again." }
+            );
+        }
+        else
+        {
+            await ctx.CreateResponseAsync(
+                InteractionResponseType.ChannelMessageWithSource,
+                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessageForDateTime(dateTime) }
+            );
+        }
     }
 
     private static async Task<DiscordMessage?> GetMostRecentMessageFor(InteractionContext ctx, DiscordUser user)

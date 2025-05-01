@@ -1,6 +1,7 @@
 ﻿using arglonbot.Configuration;
 
 using DSharpPlus;
+using DSharpPlus.SlashCommands;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -22,6 +23,7 @@ public static class Program
                 .BindConfiguration(ArglonBotConfiguration.SectionName);
 
             services.AddSingleton(CreateDiscordConfiguration);
+            services.AddSingleton(CreateSlashCommandsConfiguration);
             services.AddSingleton<DiscordClient>();
             services.AddSingleton<IMessageSelector, MessageSelector>();
 
@@ -41,6 +43,14 @@ public static class Program
             TokenType = TokenType.Bot,
             AutoReconnect = true,
             MinimumLogLevel = arglonBotConfiguration.DiscordLogLevel,
+        };
+    }
+
+    private static SlashCommandsConfiguration CreateSlashCommandsConfiguration(IServiceProvider services)
+    {
+        return new SlashCommandsConfiguration
+        {
+            Services = services
         };
     }
 }
