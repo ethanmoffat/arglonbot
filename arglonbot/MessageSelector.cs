@@ -3,8 +3,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using SquareWidget.Astronomy.Core.Calculators;
-using SquareWidget.Astronomy.Core.Models;
+using CosineKitty;
 
 using static arglonbot.Configuration.PeriodicOpenMouthSettings;
 
@@ -36,7 +35,7 @@ public class MessageSelector : IMessageSelector
         }
     }
 
-    private bool EvaluateRule(PeriodicOpenMouthSettings.MessageInfo info, DateTime time)
+    private bool EvaluateRule(MessageInfo info, DateTime time)
     {
         // if all filters are unset, this message matches the time (for default message)
         if (info.Date == null && info.DateStart == null && info.DateEnd == null
@@ -56,11 +55,7 @@ public class MessageSelector : IMessageSelector
             {
                 var start = info.DateStart.Value;
                 var end = info.DateEnd.Value;
-                var interval = new DateRange(
-                    new DateOnly(start.Year, start.Month, start.Day),
-                    new DateOnly(end.Year, end.Month, end.Day)
-                );
-                return EvaluateAter(time, interval, info.After);
+                return EvaluateAter(time, start, end, info.After);
             }
             else
             {
@@ -72,36 +67,62 @@ public class MessageSelector : IMessageSelector
         {
             return (Month)time.Month == info.Month.Value
                 && time.DayOfWeek == info.DayOfWeek.Value
-                && time.GetWeekOfMonth() == info.WeekOfMonth.Value;
+                && DoesWeekOfMonthMatch(info.WeekOfMonth.Value, time);
         }
 
         return false;
     }
 
-    private bool EvaluateAter(DateTime time, DateRange interval, MessageInfo.AfterInfo afterInfo)
+    private bool EvaluateAter(DateTime time, DateTime start, DateTime end, MessageInfo.AfterInfo afterInfo)
     {
         switch (afterInfo.Type)
         {
             case MessageInfo.AfterType.MoonPhase:
                 {
-                    var phasesInInterval = MoonPhaseDatesCalculator.Calculate(interval);
-                    var firstMatch = phasesInInterval.FirstOrDefault(x => x.PhaseName.Equals(afterInfo.Value, StringComparison.InvariantCultureIgnoreCase));
-                    if (firstMatch == null)
+                    var astroTime = new AstroTime(start);
+                    var firstMatch = Astronomy.MoonQuartersAfter(astroTime).Take(10)
+                        .OrderBy(x => x.time.ToUtcDateTime())
+                        .FirstOrDefault(x => PhaseName(x.quarter) == afterInfo.Value);
+
+                    if (firstMatch.Equals(default(MoonQuarterInfo)))
                     {
-                        _logger.LogWarning("Phase {value} was not found when calculating moon phases in interval [{start}, {end}]", afterInfo.Value, interval.StartDate, interval.EndDate);
+                        _logger.LogWarning("Phase {value} was not found when calculating moon phases in interval [{start}, {end}]", afterInfo.Value, start, end);
                         return false;
                     }
 
-                    // note: already confirmed that 'time' is within the interval
-                    var weekOfInterval = (WeekOfMonth)(time.GetWeekOfYear() - interval.StartDate.ToDateTime(TimeOnly.MinValue).GetWeekOfYear());
+                    var moonEventTime = firstMatch.time.ToUtcDateTime();
+                    if (time > moonEventTime)
+                    {
+                        var searchFromTime = moonEventTime.DayOfWeek == time.DayOfWeek
+                            ? moonEventTime.AddDays(7)
+                            : moonEventTime;
 
-                    return time > firstMatch.Moment.ToDateTime()
-                        && afterInfo.DayOfWeek == time.DayOfWeek
-                        && afterInfo.WeekOfInterval == weekOfInterval;
+                        return afterInfo.DayOfWeek == time.DayOfWeek && DoesWeekOfIntervalMatch(afterInfo.WeekOfInterval, time.Date - searchFromTime.Date);
+                    }
+
+                    return false;
                 }
             default: return false;
         }
     }
+
+    private static bool DoesWeekOfMonthMatch(WeekOfMonth weekOfMonth, DateTime time) => weekOfMonth switch
+    {
+        WeekOfMonth.Last => DateTime.DaysInMonth(time.Year, time.Month) - time.Day <= 7,
+        _ => (WeekOfMonth)(time.Day / 7) == weekOfMonth,
+    };
+
+    private static bool DoesWeekOfIntervalMatch(WeekOfMonth weekOfMonth, TimeSpan howManyDays) =>
+        weekOfMonth != WeekOfMonth.Last && (int)weekOfMonth == (int)(howManyDays.TotalDays / 7);
+
+    private static string PhaseName(int quarter) => quarter switch
+    {
+        0 => "NewMoon",
+        1 => "FirstQuarter",
+        2 => "FullMoon",
+        3 => "ThirdQuarter",
+        _ => throw new ArgumentOutOfRangeException(nameof(quarter)),
+    };
 }
 
 public interface IMessageSelector

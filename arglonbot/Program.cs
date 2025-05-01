@@ -33,7 +33,7 @@ public static class Program
 
     private static DiscordConfiguration CreateDiscordConfiguration(IServiceProvider services)
     {
-        var arglonBotConfiguration = services.GetRequiredService<ArglonBotConfiguration>();
+        var arglonBotConfiguration = services.GetRequiredService<IOptions<ArglonBotConfiguration>>().Value;
 
         return new DiscordConfiguration
         {

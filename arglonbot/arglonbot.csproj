@@ -8,10 +8,16 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SquareWidget.Astronomy.Core" Version="1.5.1" />
+    <PackageReference Include="CosineKitty.AstronomyEngine" Version="2.1.19" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
     <PackageReference Include="DSharpPlus" Version="4.5.0" />
     <PackageReference Include="DSharpPlus.SlashCommands" Version="4.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

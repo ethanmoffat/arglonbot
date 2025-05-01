@@ -59,10 +59,10 @@ public class ArglonBot : BackgroundService
         finally
         {
             await _discordClient.DisconnectAsync();
-            _discordClient?.Dispose();
-        }
+            _discordClient.Dispose();
 
-        _hostApplicationLifetime.StopApplication();
+            _hostApplicationLifetime.StopApplication();
+        }
     }
 
 

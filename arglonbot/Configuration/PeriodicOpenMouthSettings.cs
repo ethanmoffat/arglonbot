@@ -34,7 +34,7 @@ public class PeriodicOpenMouthSettings
 
     public enum Month
     {
-        January,
+        January = 1,
         February,
         March,
         April,
