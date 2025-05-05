@@ -52,6 +52,8 @@ public class ArglonBot : BackgroundService
             var firstPeriod = now < nowAtTime
                 ? nowAtTime - now
                 : tomorrowAtTime - now;
+            _logger.LogInformation("First period timer firing at {time} in {remaining}", settings.NotificationTime, firstPeriod);
+            _logger.LogInformation("Periodic interval set to {interval}", settings.NotificationInterval);
 
             using var firstPeriodTimer = new PeriodicTimer(firstPeriod);
             await PeriodicOpenMouth(firstPeriodTimer, repeat: false, stoppingToken);
