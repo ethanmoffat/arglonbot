@@ -45,12 +45,13 @@ public class ArglonBotSettingsTest
             PeriodicOpenMouthSettings = new()
             {
                 Channels = [],
-                Messages = []
+                Messages = [],
+                ExtraMessages = []
             }
         };
         config.Bind(ArglonBotConfiguration.SectionName, settings);
 
-        Assert.That(settings.PeriodicOpenMouthSettings.Channels, Is.EqualTo(expectedModel));
+        Assert.That(settings.PeriodicOpenMouthSettings.Channels.Select(x => (x.ChannelId, x.GuildId)), Is.EquivalentTo(expectedModel.Select(x => (x.ChannelId, x.GuildId))));
     }
 
     [Test]
@@ -76,7 +77,8 @@ public class ArglonBotSettingsTest
             PeriodicOpenMouthSettings = new()
             {
                 Channels = [],
-                Messages = []
+                Messages = [],
+                ExtraMessages = []
             }
         };
         config.Bind(ArglonBotConfiguration.SectionName, settings);

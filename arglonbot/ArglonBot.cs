@@ -80,7 +80,6 @@ public class ArglonBot : BackgroundService
             var configuration = _arglonBotConfiguration.CurrentValue;
 
             var now = Now(configuration.PeriodicOpenMouthSettings.NotificationTimeZone);
-            var message = _messageSelector.FindMessageForDateTime(now);
 
             foreach (var channel in configuration.PeriodicOpenMouthSettings.Channels)
             {
@@ -103,7 +102,11 @@ public class ArglonBot : BackgroundService
                     continue;
                 }
 
-                await discordChannel.SendMessageAsync(message);
+                var messages = _messageSelector.FindMessagesForDateTime(channel, now);
+                foreach (var message in messages)
+                {
+                    await discordChannel.SendMessageAsync(message);
+                }
             }
 
             if (!repeat)

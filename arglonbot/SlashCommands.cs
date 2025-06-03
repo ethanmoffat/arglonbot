@@ -4,6 +4,8 @@ using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
 
+using static arglonbot.Configuration.PeriodicOpenMouthSettings;
+
 public class SlashCommands : ApplicationCommandModule
 {
     private readonly IMessageSelector _messageSelector;
@@ -85,7 +87,7 @@ public class SlashCommands : ApplicationCommandModule
         {
             await ctx.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessageForDateTime(dateTime) }
+                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessagesForDateTime(ChannelInfo.None, dateTime).First() }
             );
         }
     }

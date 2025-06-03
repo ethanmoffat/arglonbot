@@ -21,18 +21,20 @@ public class MessageSelector : IMessageSelector
         _arglonBotConfiguration = arglonBotConfiguration;
     }
 
-    public string FindMessageForDateTime(DateTime time)
+    public List<string> FindMessagesForDateTime(ChannelInfo channelInfo, DateTime time)
     {
-        var messageRules = _arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.Messages;
-        try
-        {
-            return messageRules.First(x => EvaluateRule(x, time)).Message;
-        }
-        catch (InvalidOperationException)
+        var messageRules = new List<MessageInfo>(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.Messages);
+        messageRules.AddRange(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.ExtraMessages);
+        messageRules.AddRange(channelInfo.Messages);
+
+        List<string> res = [.. messageRules.Where(x => EvaluateRule(x, time)).Select(x => x.Message)];
+        if (res.Count == 0)
         {
             _logger.LogError("No matching message rule found for date {date}", time);
-            throw;
+            throw new InvalidOperationException("Sequence contains no matching element"); // pretend it's still .Single()
         }
+
+        return res;
     }
 
     private bool EvaluateRule(MessageInfo info, DateTime time)
@@ -127,5 +129,5 @@ public class MessageSelector : IMessageSelector
 
 public interface IMessageSelector
 {
-    string FindMessageForDateTime(DateTime time);
+    List<string> FindMessagesForDateTime(ChannelInfo channelInfo, DateTime time);
 }

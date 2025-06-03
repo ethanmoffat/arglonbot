@@ -7,7 +7,12 @@ public class PeriodicOpenMouthSettings
     public record ChannelInfo(
         [Required] string Name,
         [Required] ulong GuildId,
-        [Required] ulong ChannelId);
+        [Required] ulong ChannelId)
+    {
+        public List<MessageInfo> Messages { get; set; } = [];
+
+        public static ChannelInfo None { get; } = new ChannelInfo(string.Empty, 0, 0);
+    }
 
     public record MessageInfo(
         [Required] string Message,
@@ -59,4 +64,6 @@ public class PeriodicOpenMouthSettings
     public required List<ChannelInfo> Channels { get; set; } = [];
 
     public required List<MessageInfo> Messages { get; set; } = [];
+
+    public required List<MessageInfo> ExtraMessages { get; set; } = [];
 }

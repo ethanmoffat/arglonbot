@@ -35,7 +35,7 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         var testDate = DateTime.Parse("January 1");
-        Assert.That(messageSelector.FindMessageForDateTime(testDate), Is.EqualTo(ExpectedMessage));
+        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, testDate).First(), Is.EqualTo(ExpectedMessage));
     }
 
     [Test]
@@ -49,7 +49,7 @@ public class MessageSelectorTest
 
         var messageSelector = CreateSelector();
 
-        Assert.That(messageSelector.FindMessageForDateTime(date), Is.EqualTo(Message));
+        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, date).First(), Is.EqualTo(Message));
     }
 
     [Test]
@@ -63,7 +63,7 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         var testDate = DateTime.Parse("January 1");
-        Assert.That(() => messageSelector.FindMessageForDateTime(testDate), Throws.InvalidOperationException);
+        Assert.That(() => messageSelector.FindMessagesForDateTime(ChannelInfo.None, testDate).First(), Throws.InvalidOperationException);
     }
 
     private static IEnumerable DateRangeSource
@@ -93,7 +93,7 @@ public class MessageSelectorTest
 
         var messageSelector = CreateSelector();
 
-        Assert.That(messageSelector.FindMessageForDateTime(date), Is.EqualTo(matches ? MatchMessage : NoMatchMessage));
+        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, date).First(), Is.EqualTo(matches ? MatchMessage : NoMatchMessage));
     }
 
     [TestCase(Month.January, WeekOfMonth.Third, DayOfWeek.Monday, "2025-01-20")] // MLK day
@@ -117,8 +117,8 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
         Assert.Multiple(() =>
         {
-            Assert.That(messageSelector.FindMessageForDateTime(matchDate), Is.EqualTo(MatchMessage));
-            Assert.That(messageSelector.FindMessageForDateTime(noMatchDate), Is.EqualTo(NoMatchMessage));
+            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, matchDate).First(), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, noMatchDate).First(), Is.EqualTo(NoMatchMessage));
         });
     }
 
@@ -142,10 +142,10 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
         Assert.Multiple(() =>
         {
-            Assert.That(messageSelector.FindMessageForDateTime(matchDate), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, matchDate).First(), Is.EqualTo(MatchMessage));
 
             foreach (var noMatchDate in noMatchDates)
-                Assert.That(messageSelector.FindMessageForDateTime(noMatchDate), Is.EqualTo(NoMatchMessage));
+                Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, noMatchDate).First(), Is.EqualTo(NoMatchMessage));
         });
     }
 
@@ -158,7 +158,8 @@ public class MessageSelectorTest
                     PeriodicOpenMouthSettings = new()
                     {
                         Channels = new List<ChannelInfo>(),
-                        Messages = _messages
+                        Messages = _messages,
+                        ExtraMessages = new List<MessageInfo>()
                     }
                 });
 
