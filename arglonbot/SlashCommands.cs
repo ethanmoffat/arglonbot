@@ -1,18 +1,24 @@
 ﻿using arglonbot;
+using arglonbot.Configuration;
 
 using DSharpPlus;
 using DSharpPlus.Entities;
 using DSharpPlus.SlashCommands;
+
+using Microsoft.Extensions.Options;
 
 using static arglonbot.Configuration.PeriodicOpenMouthSettings;
 
 public class SlashCommands : ApplicationCommandModule
 {
     private readonly IMessageSelector _messageSelector;
+    private readonly PeriodicOpenMouthSettings _periodicOpenMouthSettings;
 
-    public SlashCommands(IMessageSelector messageSelector)
+    public SlashCommands(IMessageSelector messageSelector,
+                         IOptions<ArglonBotConfiguration> arglonbotConfigurationOptions)
     {
         _messageSelector = messageSelector;
+        _periodicOpenMouthSettings = arglonbotConfigurationOptions.Value.PeriodicOpenMouthSettings;
     }
 
     [SlashCommand("react", "Arglon will react appropriately to the specified user.")]
@@ -85,9 +91,13 @@ public class SlashCommands : ApplicationCommandModule
         }
         else
         {
+            var channelInfo = _periodicOpenMouthSettings.Channels
+                .Where(x => x.GuildId == ctx.Channel.GuildId && x.ChannelId == ctx.Channel.Id)
+                .FirstOrDefault();
+
             await ctx.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessagesForDateTime(ChannelInfo.None, dateTime).First() }
+                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessageForDateTime(channelInfo ?? ChannelInfo.None, dateTime) }
             );
         }
     }

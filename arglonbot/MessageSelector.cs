@@ -21,20 +21,26 @@ public class MessageSelector : IMessageSelector
         _arglonBotConfiguration = arglonBotConfiguration;
     }
 
-    public List<string> FindMessagesForDateTime(ChannelInfo channelInfo, DateTime time)
+    public string FindMessageForDateTime(ChannelInfo channelInfo, DateTime time)
     {
         var messageRules = new List<MessageInfo>(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.Messages);
         messageRules.AddRange(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.ExtraMessages);
         messageRules.AddRange(channelInfo.Messages);
 
-        List<string> res = [.. messageRules.Where(x => EvaluateRule(x, time)).Select(x => x.Message)];
-        if (res.Count == 0)
+        try
+        {
+            var message = messageRules
+                .OrderBy(x => x.Date ?? DateTime.MaxValue)
+                .ThenBy(x => x.DateStart ?? DateTime.MaxValue)
+                .ThenBy(x => ((int?)x?.Month ?? short.MaxValue) + ((int?)x?.WeekOfMonth ?? short.MaxValue) + ((int?)x?.DayOfWeek ?? short.MaxValue))
+                .First(x => EvaluateRule(x, time));
+            return FormatMessage(message);
+        }
+        catch (InvalidOperationException)
         {
             _logger.LogError("No matching message rule found for date {date}", time);
-            throw new InvalidOperationException("Sequence contains no matching element"); // pretend it's still .Single()
+            throw;
         }
-
-        return res;
     }
 
     private bool EvaluateRule(MessageInfo info, DateTime time)
@@ -108,6 +114,31 @@ public class MessageSelector : IMessageSelector
         }
     }
 
+    private string FormatMessage(MessageInfo inputMessage)
+    {
+        var ret = inputMessage.Message;
+        foreach (var replacement in inputMessage.TokenReplacements)
+        {
+            ret = ret.Replace(
+                replacement.Token,
+                (replacement.ReplacementType, inputMessage.DateStart.HasValue) switch
+                {
+                    (MessageInfo.ReplacementType.YearsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.YearsSince()),
+                    (MessageInfo.ReplacementType.MonthsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.MonthsSince()),
+                    (_, _) => replacement.Value
+                });
+        }
+        return ret;
+
+        static string FormatNth(int interval) => (interval % 10) switch
+        {
+            1 => $"{interval}st",
+            2 => $"{interval}nd",
+            3 => $"{interval}rd",
+            _ => $"{interval}th"
+        };
+    }
+
     private static bool DoesWeekOfMonthMatch(WeekOfMonth weekOfMonth, DateTime time) => weekOfMonth switch
     {
         WeekOfMonth.Last => DateTime.DaysInMonth(time.Year, time.Month) - time.Day <= 7,
@@ -129,5 +160,5 @@ public class MessageSelector : IMessageSelector
 
 public interface IMessageSelector
 {
-    List<string> FindMessagesForDateTime(ChannelInfo channelInfo, DateTime time);
+    string FindMessageForDateTime(ChannelInfo channelInfo, DateTime time);
 }

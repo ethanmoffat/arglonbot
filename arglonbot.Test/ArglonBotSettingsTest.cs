@@ -32,23 +32,14 @@ public class ArglonBotSettingsTest
 
         var expectedModel = new List<ChannelInfo>
         {
-            new("Phorophor#Lounge", 723989119503696013, 787685796055482368),
-            new("EOMobile#General", 1306039236407066736, 1306039236931223614)
+            new("Phorophor#Lounge", 723989119503696013, 787685796055482368, []),
+            new("EOMobile#General", 1306039236407066736, 1306039236931223614, [])
         };
 
         var config = new ConfigurationBuilder()
             .AddJsonStream(new MemoryStream(Encoding.UTF8.GetBytes(ConfigString)))
             .Build();
-        var settings = new ArglonBotConfiguration
-        {
-            BotToken = "",
-            PeriodicOpenMouthSettings = new()
-            {
-                Channels = [],
-                Messages = [],
-                ExtraMessages = []
-            }
-        };
+        var settings = new ArglonBotConfiguration();
         config.Bind(ArglonBotConfiguration.SectionName, settings);
 
         Assert.That(settings.PeriodicOpenMouthSettings.Channels.Select(x => (x.ChannelId, x.GuildId)), Is.EquivalentTo(expectedModel.Select(x => (x.ChannelId, x.GuildId))));

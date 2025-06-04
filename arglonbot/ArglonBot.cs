@@ -102,11 +102,7 @@ public class ArglonBot : BackgroundService
                     continue;
                 }
 
-                var messages = _messageSelector.FindMessagesForDateTime(channel, now);
-                foreach (var message in messages)
-                {
-                    await discordChannel.SendMessageAsync(message);
-                }
+                await discordChannel.SendMessageAsync(_messageSelector.FindMessageForDateTime(channel, now));
             }
 
             if (!repeat)

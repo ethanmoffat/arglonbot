@@ -1,13 +1,13 @@
+using System.Collections;
+
 using arglonbot.Configuration;
 
-using Moq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using static arglonbot.Configuration.PeriodicOpenMouthSettings;
-using static arglonbot.Configuration.PeriodicOpenMouthSettings.MessageInfo;
-using System.Collections;
-using static System.Runtime.InteropServices.JavaScript.JSType;
+using Moq;
+
+using static arglonbot.Configuration.MessageInfo;
 
 namespace arglonbot.Test;
 
@@ -35,7 +35,7 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         var testDate = DateTime.Parse("January 1");
-        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, testDate).First(), Is.EqualTo(ExpectedMessage));
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(ExpectedMessage));
     }
 
     [Test]
@@ -49,7 +49,7 @@ public class MessageSelectorTest
 
         var messageSelector = CreateSelector();
 
-        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, date).First(), Is.EqualTo(Message));
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo(Message));
     }
 
     [Test]
@@ -63,7 +63,7 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         var testDate = DateTime.Parse("January 1");
-        Assert.That(() => messageSelector.FindMessagesForDateTime(ChannelInfo.None, testDate).First(), Throws.InvalidOperationException);
+        Assert.That(() => messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Throws.InvalidOperationException);
     }
 
     private static IEnumerable DateRangeSource
@@ -93,7 +93,7 @@ public class MessageSelectorTest
 
         var messageSelector = CreateSelector();
 
-        Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, date).First(), Is.EqualTo(matches ? MatchMessage : NoMatchMessage));
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo(matches ? MatchMessage : NoMatchMessage));
     }
 
     [TestCase(Month.January, WeekOfMonth.Third, DayOfWeek.Monday, "2025-01-20")] // MLK day
@@ -117,8 +117,8 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
         Assert.Multiple(() =>
         {
-            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, matchDate).First(), Is.EqualTo(MatchMessage));
-            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, noMatchDate).First(), Is.EqualTo(NoMatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, matchDate), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, noMatchDate), Is.EqualTo(NoMatchMessage));
         });
     }
 
@@ -142,11 +142,82 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
         Assert.Multiple(() =>
         {
-            Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, matchDate).First(), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, matchDate), Is.EqualTo(MatchMessage));
 
             foreach (var noMatchDate in noMatchDates)
-                Assert.That(messageSelector.FindMessagesForDateTime(ChannelInfo.None, noMatchDate).First(), Is.EqualTo(NoMatchMessage));
+                Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, noMatchDate), Is.EqualTo(NoMatchMessage));
         });
+    }
+
+    [Test]
+    public void TestDirectSubstitution()
+    {
+        const string Token = "{token}";
+        const string Format = $"This is a {Token} template!";
+        const string Replacement = "substituted";
+        const string MatchMessage = $"This is a {Replacement} template!";
+        const string NoMatchMessage = "This is the default message.";
+
+        AddDirectSubstitutionTokenReplacement(DateTime.Now.Date, Token, Replacement, Format);
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, DateTime.Now.Date), Is.EqualTo(MatchMessage));
+    }
+
+    [TestCase(0, "th")]
+    [TestCase(1, "st")]
+    [TestCase(2, "nd")]
+    [TestCase(3, "rd")]
+    [TestCase(4, "th")]
+    [TestCase(42, "nd")]
+    [TestCase(69, "th")]
+    [TestCase(101, "st")]
+    [TestCase(1003, "rd")]
+    public void TestAnnualAnniversarySubstitution(int yearsAfter, string expectedSuffix)
+    {
+        const string Token = "{token}";
+        const string Format = $"This is the {Token} anniversary!";
+        var MatchMessage = Format.Replace(Token, $"{yearsAfter}{expectedSuffix}");
+        const string NoMatchMessage = "This is the default message.";
+
+        var testDate = DateTime.Now;
+        var startDate = testDate.AddYears(-yearsAfter);
+
+        AddYearsAfterTokenReplacement(testDate, startDate, Token, Format);
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(MatchMessage));
+    }
+
+    [TestCase(0, "th")]
+    [TestCase(1, "st")]
+    [TestCase(2, "nd")]
+    [TestCase(3, "rd")]
+    [TestCase(4, "th")]
+    [TestCase(42, "nd")]
+    [TestCase(69, "th")]
+    [TestCase(101, "st")]
+    [TestCase(1003, "rd")]
+    public void TestMonthlyAnniversarySubtitution(int monthsAfter, string expectedSuffix)
+    {
+        const string Token = "{token}";
+        const string Format = $"This is the {Token} monthly anniversary!";
+        var MatchMessage = Format.Replace(Token, $"{monthsAfter}{expectedSuffix}");
+        const string NoMatchMessage = "This is the default message.";
+
+        var testDate = DateTime.Now;
+        var startDate = testDate.AddMonths(-monthsAfter);
+
+        AddMonthsAfterTokenReplacement(testDate, startDate, Token, Format);
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(MatchMessage));
     }
 
     private IMessageSelector CreateSelector()
@@ -181,12 +252,12 @@ public class MessageSelectorTest
 
     private void AddDateRangeRule(DateTime start, DateTime end, string message)
     {
-        _messages.Add(new(message, DateStart: start, DateEnd: end));
+        _messages.Add(new(message, dateStart: start, dateEnd: end));
     }
 
     private void AddWeekOfMonthRule(Month month, WeekOfMonth week, DayOfWeek dayOfWeek, string message)
     {
-        _messages.Add(new(message, Month: month, WeekOfMonth: week, DayOfWeek: dayOfWeek));
+        _messages.Add(new(message, month: month, weekOfMonth: week, dayOfWeek: dayOfWeek));
     }
 
     /// <summary>
@@ -195,6 +266,36 @@ public class MessageSelectorTest
     private void AddMoonPhaseRule(DateTime start, DateTime end, string moonPhase, WeekOfMonth weekAfter, DayOfWeek dayOfWeek, string message)
     {
         var afterInfo = new AfterInfo(AfterType.MoonPhase, moonPhase, dayOfWeek, weekAfter);
-        _messages.Add(new(message, DateStart: start, DateEnd: end, After: afterInfo));
+        _messages.Add(new(message, dateStart: start, dateEnd: end) { After = afterInfo });
+    }
+
+    private void AddDirectSubstitutionTokenReplacement(DateTime date, string token, string replacement, string message)
+    {
+        _messages.Add(new(message, date)
+        {
+            TokenReplacements = [
+                new(token, ReplacementType.Substitute, replacement)
+            ]
+        });
+    }
+
+    private void AddYearsAfterTokenReplacement(DateTime date, DateTime startDate, string token, string message)
+    {
+        _messages.Add(new(message, date: date, dateStart: startDate)
+        {
+            TokenReplacements = [
+                new(token, ReplacementType.YearsSinceStart)
+            ]
+        });
+    }
+
+    private void AddMonthsAfterTokenReplacement(DateTime date, DateTime startDate, string token, string message)
+    {
+        _messages.Add(new(message, date: date, dateStart: startDate)
+        {
+            TokenReplacements = [
+                new(token, ReplacementType.MonthsSinceStart)
+            ]
+        });
     }
 }

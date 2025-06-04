@@ -1,58 +1,13 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
+
+using Microsoft.Extensions.Options;
 
 namespace arglonbot.Configuration;
 
-public class PeriodicOpenMouthSettings
+[method: SetsRequiredMembers]
+public class PeriodicOpenMouthSettings()
 {
-    public record ChannelInfo(
-        [Required] string Name,
-        [Required] ulong GuildId,
-        [Required] ulong ChannelId)
-    {
-        public List<MessageInfo> Messages { get; set; } = [];
-
-        public static ChannelInfo None { get; } = new ChannelInfo(string.Empty, 0, 0);
-    }
-
-    public record MessageInfo(
-        [Required] string Message,
-        DateTime? Date = default,
-        DateTime? DateStart = default,
-        DateTime? DateEnd = default,
-        Month? Month = default,
-        DayOfWeek? DayOfWeek = default,
-        WeekOfMonth? WeekOfMonth = default,
-        MessageInfo.AfterInfo? After = null)
-    {
-        public record class AfterInfo(
-            [Required] AfterType Type,
-            [Required] string Value,
-            [Required] DayOfWeek DayOfWeek,
-            [Required] WeekOfMonth WeekOfInterval);
-
-        public enum AfterType
-        {
-            None,
-            MoonPhase
-        }
-    }
-
-    public enum Month
-    {
-        January = 1,
-        February,
-        March,
-        April,
-        May,
-        June,
-        July,
-        August,
-        September,
-        October,
-        November,
-        December
-    }
-
     [Required]
     public TimeSpan NotificationTime { get; set; }
 
@@ -61,9 +16,12 @@ public class PeriodicOpenMouthSettings
     [Required]
     public TimeSpan NotificationInterval { get; set; }
 
+    [ValidateEnumeratedItems]
     public required List<ChannelInfo> Channels { get; set; } = [];
 
+    [ValidateEnumeratedItems]
     public required List<MessageInfo> Messages { get; set; } = [];
 
+    [ValidateEnumeratedItems]
     public required List<MessageInfo> ExtraMessages { get; set; } = [];
 }
