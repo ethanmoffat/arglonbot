@@ -1,11 +1,9 @@
 ﻿using arglonbot.Configuration;
 
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-
 using CosineKitty;
 
-using static arglonbot.Configuration.PeriodicOpenMouthSettings;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace arglonbot;
 
@@ -23,23 +21,44 @@ public class MessageSelector : IMessageSelector
 
     public string FindMessageForDateTime(ChannelInfo channelInfo, DateTime time)
     {
+        var overrideRules = new List<MessageInfo>(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.ExtraMessages);
+        overrideRules.AddRange(channelInfo.Messages);
+
         var messageRules = new List<MessageInfo>(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.Messages);
-        messageRules.AddRange(_arglonBotConfiguration.CurrentValue.PeriodicOpenMouthSettings.ExtraMessages);
         messageRules.AddRange(channelInfo.Messages);
 
         try
         {
-            var message = messageRules
-                .OrderBy(x => x.Date ?? DateTime.MaxValue)
-                .ThenBy(x => x.DateStart ?? DateTime.MaxValue)
-                .ThenBy(x => ((int?)x?.Month ?? short.MaxValue) + ((int?)x?.WeekOfMonth ?? short.MaxValue) + ((int?)x?.DayOfWeek ?? short.MaxValue))
-                .First(x => EvaluateRule(x, time));
-            return FormatMessage(message);
+            var message = GetMessage(overrideRules, time, shouldThrow: false);
+            if (string.IsNullOrEmpty(message))
+            {
+                message = GetMessage(messageRules, time, shouldThrow: true)!;
+            }
+            return message;
         }
         catch (InvalidOperationException)
         {
             _logger.LogError("No matching message rule found for date {date}", time);
             throw;
+        }
+    }
+
+    private string? GetMessage(List<MessageInfo> messageRules, DateTime time, bool shouldThrow)
+    {
+        var orderedRules = messageRules
+            .OrderBy(x => x.Date ?? DateTime.MaxValue)
+            .ThenBy(x => x.DateStart ?? DateTime.MaxValue)
+            .ThenBy(x => ((int?)x?.Month ?? short.MaxValue) + ((int?)x?.WeekOfMonth ?? short.MaxValue) + ((int?)x?.DayOfWeek ?? short.MaxValue));
+
+        if (shouldThrow)
+        {
+            var message = orderedRules.First(x => EvaluateRule(x, time));
+            return FormatMessage(message);
+        }
+        else
+        {
+            var message = orderedRules.FirstOrDefault(x => EvaluateRule(x, time));
+            return message == null ? null : FormatMessage(message);
         }
     }
 
