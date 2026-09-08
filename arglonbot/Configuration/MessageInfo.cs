@@ -20,6 +20,13 @@ public class MessageInfo()
         MonthsSinceStart
     }
 
+    public enum EasterObservance
+    {
+        Western,
+        Orthodox,
+        Both
+    }
+
     public class AfterInfo()
     {
         [Required]
@@ -74,7 +81,8 @@ public class MessageInfo()
         Month? month = default,
         DayOfWeek? dayOfWeek = default,
         WeekdayOccurrence? weekOfMonth = default,
-        AfterInfo? after = null)
+        AfterInfo? after = null,
+        EasterObservance? easter = default)
         : this()
     {
         Message = message;
@@ -85,6 +93,7 @@ public class MessageInfo()
         DayOfWeek = dayOfWeek;
         WeekOfMonth = weekOfMonth;
         After = after;
+        Easter = easter;
     }
 
     [Required]
@@ -101,6 +110,8 @@ public class MessageInfo()
     public DayOfWeek? DayOfWeek { get; set; }
 
     public WeekdayOccurrence? WeekOfMonth { get; set; }
+
+    public EasterObservance? Easter { get; set; }
 
     [ValidateObjectMembers]
     public AfterInfo? After { get; set; } = null;

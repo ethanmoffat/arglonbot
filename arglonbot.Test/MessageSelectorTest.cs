@@ -225,6 +225,40 @@ public class MessageSelectorTest
         });
     }
 
+    [TestCase("2020-04-12")]
+    [TestCase("2021-04-04")]
+    [TestCase("2022-04-17")]
+    [TestCase("2023-04-09")]
+    [TestCase("2024-03-31")]
+    [TestCase("2025-04-20")]
+    [TestCase("2026-04-05")]
+    [TestCase("2027-03-28")]
+    [TestCase("2028-04-16")]
+    [TestCase("2029-04-01")]
+    [TestCase("2030-04-21")]
+    [TestCase("2008-03-23")] // paschal full moon on March 21 -> earliest-boundary edge case
+    [TestCase("2038-04-25")] // latest possible Easter
+    [TestCase("1978-03-26")] // early-boundary Easter
+    [TestCase("1980-04-06")]
+    [TestCase("1983-04-03")]
+    [TestCase("1981-04-19")] // astronomical/ecclesiastical divergence
+    public void TestWesternEasterRuleMatchesRealEasterDatesIncludingBoundaryAndDivergenceYears(DateTime easterDate)
+    {
+        const string MatchMessage = "Happy Easter!";
+        const string NoMatchMessage = "default";
+
+        _messages.Add(new(MatchMessage, easter: EasterObservance.Western));
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+        Assert.Multiple(() =>
+        {
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate), Is.EqualTo(MatchMessage), $"Easter {easterDate:yyyy-MM-dd} should match");
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate.AddDays(-7)), Is.EqualTo(NoMatchMessage), "the Sunday before Easter should not match");
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate.AddDays(7)), Is.EqualTo(NoMatchMessage), "the Sunday after Easter should not match");
+        });
+    }
+
     [TestCase(0, "th")]
     [TestCase(1, "st")]
     [TestCase(2, "nd")]
@@ -277,6 +311,81 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(MatchMessage));
+    }
+
+    [TestCase(EasterObservance.Western, "2024-03-31")]
+    [TestCase(EasterObservance.Western, "2025-04-20")]
+    [TestCase(EasterObservance.Western, "2026-04-05")]
+    [TestCase(EasterObservance.Western, "1981-04-19")] // astronomical/ecclesiastical divergence year
+    [TestCase(EasterObservance.Orthodox, "2024-05-05")]
+    [TestCase(EasterObservance.Orthodox, "2025-04-20")]
+    [TestCase(EasterObservance.Orthodox, "2026-04-12")]
+    [TestCase(EasterObservance.Both, "2025-04-20")]
+    public void TestEasterRuleMatchesOnlyTheDateOfTheConfiguredObservance(EasterObservance observance, DateTime easterDate)
+    {
+        const string MatchMessage = "easter!";
+        const string NoMatchMessage = "default";
+
+        _messages.Add(new(MatchMessage, easter: observance));
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+        Assert.Multiple(() =>
+        {
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate.AddDays(-1)), Is.EqualTo(NoMatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, easterDate.AddDays(1)), Is.EqualTo(NoMatchMessage));
+        });
+    }
+
+    [Test]
+    public void TestWesternAndOrthodoxRulesMatchTheirOwnDatesInDivergentYears()
+    {
+        const string Western = "western";
+        const string Orthodox = "orthodox";
+        const string NoMatchMessage = "default";
+
+        _messages.Add(new(Western, easter: EasterObservance.Western));
+        _messages.Add(new(Orthodox, easter: EasterObservance.Orthodox));
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+        Assert.Multiple(() =>
+        {
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, new DateTime(2024, 3, 31)), Is.EqualTo(Western));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, new DateTime(2024, 5, 5)), Is.EqualTo(Orthodox));
+        });
+    }
+
+    [TestCase("2024-03-31", TestName = "TestBothDoesNotMatchWesternEasterInDivergentYear")]
+    [TestCase("2024-05-05", TestName = "TestBothDoesNotMatchOrthodoxEasterInDivergentYear")]
+    [TestCase("2026-04-05", TestName = "TestBothDoesNotMatchWesternEaster2026")]
+    [TestCase("2026-04-12", TestName = "TestBothDoesNotMatchOrthodoxEaster2026")]
+    public void TestBothObservanceDoesNotMatchEitherEasterInDivergentYears(DateTime date)
+    {
+        const string NoMatchMessage = "default";
+
+        _messages.Add(new("both", easter: EasterObservance.Both));
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo(NoMatchMessage));
+    }
+
+    [Test]
+    public void TestBothObservanceWinsOverWesternAndOrthodoxWhenConfiguredFirst()
+    {
+        const string Shared = "shared";
+
+        _messages.Add(new(Shared, easter: EasterObservance.Both));
+        _messages.Add(new("western", easter: EasterObservance.Western));
+        _messages.Add(new("orthodox", easter: EasterObservance.Orthodox));
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, new DateTime(2025, 4, 20)), Is.EqualTo(Shared));
     }
 
     [Test]

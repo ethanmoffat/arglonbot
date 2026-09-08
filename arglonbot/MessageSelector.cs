@@ -67,8 +67,13 @@ public class MessageSelector : IMessageSelector
         // if all filters are unset, this message matches the time (for default message)
         if (info.Date == null && info.DateStart == null && info.DateEnd == null
             && info.Month == null && info.DayOfWeek == null && info.WeekOfMonth == null
-            && info.After == null)
+            && info.After == null && info.Easter == null)
             return true;
+
+        if (info.Easter != null)
+        {
+            return DoesEasterMatch(info.Easter.Value, time);
+        }
 
         if (info.Date != null)
         {
@@ -131,6 +136,20 @@ public class MessageSelector : IMessageSelector
                 }
             default: return false;
         }
+    }
+
+    private static bool DoesEasterMatch(MessageInfo.EasterObservance observance, DateTime time)
+    {
+        var western = PaschalFullMoon.GregorianEaster(time.Year);
+        var orthodox = PaschalFullMoon.OrthodoxEaster(time.Year);
+
+        return observance switch
+        {
+            MessageInfo.EasterObservance.Western => time.Date == western,
+            MessageInfo.EasterObservance.Orthodox => time.Date == orthodox,
+            MessageInfo.EasterObservance.Both => time.Date == western && western == orthodox,
+            _ => throw new ArgumentOutOfRangeException(nameof(observance)),
+        };
     }
 
     private string FormatMessage(MessageInfo inputMessage)
