@@ -27,6 +27,10 @@ public static class Program
             services.AddSingleton<DiscordClient>();
             services.AddSingleton<IMessageSelector, MessageSelector>();
 
+            services.AddSingleton<IEclipsePathResolver, EclipsePathResolver>();
+            services.AddSingleton<IRegionDescriber, RegionDescriber>();
+            services.AddSingleton<IEclipseResolver, EclipseResolver>();
+
             services.AddHostedService<ArglonBot>();
         });
 

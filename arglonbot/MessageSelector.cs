@@ -1,4 +1,6 @@
-﻿using arglonbot.Configuration;
+﻿using System.Numerics;
+
+using arglonbot.Configuration;
 
 using CosineKitty;
 
@@ -11,12 +13,15 @@ public class MessageSelector : IMessageSelector
 {
     private readonly ILogger<MessageSelector> _logger;
     private readonly IOptionsMonitor<ArglonBotConfiguration> _arglonBotConfiguration;
+    private readonly IEclipseResolver _eclipseResolver;
 
     public MessageSelector(ILoggerFactory loggerFactory,
-                           IOptionsMonitor<ArglonBotConfiguration> arglonBotConfiguration)
+                           IOptionsMonitor<ArglonBotConfiguration> arglonBotConfiguration,
+                           IEclipseResolver eclipseResolver)
     {
         _logger = loggerFactory.CreateLogger<MessageSelector>();
         _arglonBotConfiguration = arglonBotConfiguration;
+        _eclipseResolver = eclipseResolver;
     }
 
     public string FindMessageForDateTime(ChannelInfo channelInfo, DateTime time)
@@ -53,12 +58,12 @@ public class MessageSelector : IMessageSelector
         if (shouldThrow)
         {
             var message = orderedRules.First(x => EvaluateRule(x, time));
-            return FormatMessage(message);
+            return FormatMessage(message, time);
         }
         else
         {
             var message = orderedRules.FirstOrDefault(x => EvaluateRule(x, time));
-            return message == null ? null : FormatMessage(message);
+            return message == null ? null : FormatMessage(message, time);
         }
     }
 
@@ -67,12 +72,23 @@ public class MessageSelector : IMessageSelector
         // if all filters are unset, this message matches the time (for default message)
         if (info.Date == null && info.DateStart == null && info.DateEnd == null
             && info.Month == null && info.DayOfWeek == null && info.WeekOfMonth == null
-            && info.After == null && info.Easter == null)
+            && info.After == null && info.Season == null && info.Eclipse == null
+            && info.Easter == null)
             return true;
 
         if (info.Easter != null)
         {
             return DoesEasterMatch(info.Easter.Value, time);
+        }
+
+        if (info.Eclipse != null)
+        {
+            return _eclipseResolver.Resolve(info.Eclipse.Value, time) != null;
+        }
+
+        if (info.Season != null)
+        {
+            return DoesSeasonMatch(info.Season.Value, time);
         }
 
         if (info.Date != null)
@@ -152,8 +168,28 @@ public class MessageSelector : IMessageSelector
         };
     }
 
-    private string FormatMessage(MessageInfo inputMessage)
+    private static bool DoesSeasonMatch(MessageInfo.SeasonEvent season, DateTime time)
     {
+        var seasons = Astronomy.Seasons(time.Year);
+        var eventTime = season switch
+        {
+            MessageInfo.SeasonEvent.MarchEquinox => seasons.mar_equinox,
+            MessageInfo.SeasonEvent.JuneSolstice => seasons.jun_solstice,
+            MessageInfo.SeasonEvent.SeptemberEquinox => seasons.sep_equinox,
+            MessageInfo.SeasonEvent.DecemberSolstice => seasons.dec_solstice,
+            _ => throw new ArgumentOutOfRangeException(nameof(season)),
+        };
+
+        return time.Date == eventTime.ToUtcDateTime().Date;
+    }
+
+    private string FormatMessage(MessageInfo inputMessage, DateTime time)
+    {
+        // Only resolved when a message actually uses an eclipse token.
+        var eclipse = new Lazy<EclipseDetails?>(() => inputMessage.Eclipse == null
+            ? null
+            : _eclipseResolver.Resolve(inputMessage.Eclipse.Value, time));
+
         var ret = inputMessage.Message;
         foreach (var replacement in inputMessage.TokenReplacements)
         {
@@ -163,6 +199,13 @@ public class MessageSelector : IMessageSelector
                 {
                     (MessageInfo.ReplacementType.YearsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.YearsSince()),
                     (MessageInfo.ReplacementType.MonthsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.MonthsSince()),
+                    (MessageInfo.ReplacementType.EclipseLocation, _) => eclipse.Value?.Location ?? replacement.Value,
+                    (MessageInfo.ReplacementType.EclipseTime, _) => eclipse.Value == null
+                        ? replacement.Value
+                        : $"{eclipse.Value.PeakUtc:HH:mm} UTC",
+                    (MessageInfo.ReplacementType.EclipseMap, _) => string.IsNullOrEmpty(eclipse.Value?.MapUrl)
+                        ? replacement.Value
+                        : eclipse.Value.MapUrl,
                     (_, _) => replacement.Value
                 });
         }

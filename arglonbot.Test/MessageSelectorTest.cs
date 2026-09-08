@@ -259,6 +259,29 @@ public class MessageSelectorTest
         });
     }
 
+    [TestCase(SeasonEvent.MarchEquinox, "2025-03-20")]
+    [TestCase(SeasonEvent.JuneSolstice, "2025-06-21")]
+    [TestCase(SeasonEvent.SeptemberEquinox, "2025-09-22")]
+    [TestCase(SeasonEvent.DecemberSolstice, "2025-12-21")]
+    [TestCase(SeasonEvent.MarchEquinox, "2024-03-20")]
+    [TestCase(SeasonEvent.DecemberSolstice, "2024-12-21")]
+    public void TestSeasonRuleMatchesOnlyTheUtcDayOfTheEquinoxOrSolstice(SeasonEvent season, DateTime eventDate)
+    {
+        const string MatchMessage = "seasonal event!";
+        const string NoMatchMessage = "default";
+
+        AddSeasonRule(season, MatchMessage);
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+        Assert.Multiple(() =>
+        {
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, eventDate), Is.EqualTo(MatchMessage), $"{season} {eventDate:yyyy-MM-dd} should match");
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, eventDate.AddDays(-1)), Is.EqualTo(NoMatchMessage), "the day before should not match");
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, eventDate.AddDays(1)), Is.EqualTo(NoMatchMessage), "the day after should not match");
+        });
+    }
+
     [TestCase(0, "th")]
     [TestCase(1, "st")]
     [TestCase(2, "nd")]
@@ -311,6 +334,70 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(MatchMessage));
+    }
+
+    [TestCase(EclipseEventType.Solar, "2024-04-08")]
+    [TestCase(EclipseEventType.Solar, "2026-08-12")]
+    [TestCase(EclipseEventType.Lunar, "2025-03-14")]
+    public void TestEclipseRuleMatchesOnlyWithinTheNextTwentyFourHours(EclipseEventType type, DateTime eclipseDate)
+    {
+        const string MatchMessage = "eclipse day!";
+        const string NoMatchMessage = "default";
+
+        var utcMidnight = DateTime.SpecifyKind(eclipseDate.Date, DateTimeKind.Utc);
+
+        _messages.Add(new(MatchMessage, eclipse: type));
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+        Assert.Multiple(() =>
+        {
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, utcMidnight), Is.EqualTo(MatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, utcMidnight.AddDays(-2)), Is.EqualTo(NoMatchMessage));
+            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, utcMidnight.AddDays(1)), Is.EqualTo(NoMatchMessage));
+        });
+    }
+
+    [Test]
+    public void TestEclipseTokensExpandToPeakTimeRegionsAndMapUrl()
+    {
+        var eclipseDate = new DateTime(2024, 4, 8, 0, 0, 0, DateTimeKind.Utc);
+
+        _messages.Add(new("Eclipse at {when} over {where}. Map: {map}", eclipse: EclipseEventType.Solar)
+        {
+            TokenReplacements = [
+                new("{when}", ReplacementType.EclipseTime, "?"),
+                new("{where}", ReplacementType.EclipseLocation, "?"),
+                new("{map}", ReplacementType.EclipseMap, "?")
+            ]
+        });
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+        var result = messageSelector.FindMessageForDateTime(ChannelInfo.None, eclipseDate);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.StartWith("Eclipse at 18:17 UTC over Mexico, "));
+            Assert.That(result, Does.Contain("eastern Canada"));
+            Assert.That(result, Does.Contain("https://www.openstreetmap.org/?mlat=25."));
+        });
+    }
+
+    [Test]
+    public void TestPartialSolarEclipseDoesNotMatchAndFallsThroughToDefault()
+    {
+        _messages.Add(new("Best viewed from {where}.", eclipse: EclipseEventType.Solar)
+        {
+            TokenReplacements = [new("{where}", ReplacementType.EclipseLocation, "?")]
+        });
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(
+            messageSelector.FindMessageForDateTime(ChannelInfo.None, new DateTime(2025, 3, 29, 0, 0, 0, DateTimeKind.Utc)),
+            Is.EqualTo("default"));
     }
 
     [TestCase(EasterObservance.Western, "2024-03-31")]
@@ -488,7 +575,8 @@ public class MessageSelectorTest
 
         return new MessageSelector(
             Mock.Of<ILoggerFactory>(x => x.CreateLogger(It.IsAny<string>()) == Mock.Of<ILogger>()),
-            options
+            options,
+            new EclipseResolver(new EclipsePathResolver(), new RegionDescriber())
         );
     }
 
@@ -516,6 +604,11 @@ public class MessageSelectorTest
     {
         var afterInfo = new AfterInfo(AfterType.MoonPhase, moonPhase, dayOfWeek, weekAfter);
         _messages.Add(new(message, dateStart: start, dateEnd: end) { After = afterInfo });
+    }
+
+    private void AddSeasonRule(SeasonEvent season, string message)
+    {
+        _messages.Add(new(message, season: season));
     }
 
     private void AddDirectSubstitutionTokenReplacement(DateTime date, string token, string replacement, string message)

@@ -17,7 +17,24 @@ public class MessageInfo()
     {
         Substitute,
         YearsSinceStart,
-        MonthsSinceStart
+        MonthsSinceStart,
+        EclipseLocation,
+        EclipseTime,
+        EclipseMap
+    }
+
+    public enum SeasonEvent
+    {
+        MarchEquinox,
+        JuneSolstice,
+        SeptemberEquinox,
+        DecemberSolstice
+    }
+
+    public enum EclipseEventType
+    {
+        Solar,
+        Lunar
     }
 
     public enum EasterObservance
@@ -82,6 +99,8 @@ public class MessageInfo()
         DayOfWeek? dayOfWeek = default,
         WeekdayOccurrence? weekOfMonth = default,
         AfterInfo? after = null,
+        SeasonEvent? season = default,
+        EclipseEventType? eclipse = default,
         EasterObservance? easter = default)
         : this()
     {
@@ -93,6 +112,8 @@ public class MessageInfo()
         DayOfWeek = dayOfWeek;
         WeekOfMonth = weekOfMonth;
         After = after;
+        Season = season;
+        Eclipse = eclipse;
         Easter = easter;
     }
 
@@ -110,6 +131,10 @@ public class MessageInfo()
     public DayOfWeek? DayOfWeek { get; set; }
 
     public WeekdayOccurrence? WeekOfMonth { get; set; }
+
+    public SeasonEvent? Season { get; set; }
+
+    public EclipseEventType? Eclipse { get; set; }
 
     public EasterObservance? Easter { get; set; }
 
