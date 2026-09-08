@@ -64,6 +64,7 @@ public class EclipsePathResolverTest
     }
 
     [TestCase(EclipseEventType.Solar, "2024-04-08 00:00", true)]
+    [TestCase(EclipseEventType.Solar, "2024-10-02 00:00", true)]
     [TestCase(EclipseEventType.Lunar, "2025-03-14 00:00", false)]
     public void TestMapUrlIsProvidedForSolarButNotLunarEclipses(EclipseEventType type, DateTime time, bool hasMapUrl)
     {
@@ -73,5 +74,24 @@ public class EclipsePathResolverTest
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.MapUrl.StartsWith("https://www.openstreetmap.org/", StringComparison.Ordinal), Is.EqualTo(hasMapUrl));
+    }
+
+    [Test]
+    public void TestAnnularPathPassesNearGreatestEclipseCoordinatesInChronologicalOrder()
+    {
+        var peak = new DateTime(2024, 10, 2, 18, 45, 0, DateTimeKind.Utc);
+
+        var path = _resolver.TracePath(peak);
+
+        Assert.That(path, Is.Not.Empty);
+        var atPeak = path.OrderBy(x => Math.Abs((x.TimeUtc - peak).TotalMinutes)).First();
+        Assert.Multiple(() =>
+        {
+            Assert.That(atPeak.Latitude, Is.EqualTo(-21.9).Within(1.0));
+            Assert.That(atPeak.Longitude, Is.EqualTo(-114.5).Within(1.0));
+            Assert.That(path.Select(x => x.TimeUtc), Is.Ordered);
+            Assert.That(path.All(x => x.Latitude is >= -90 and <= 90), Is.True);
+            Assert.That(path.All(x => x.Longitude is >= -180 and <= 180), Is.True);
+        });
     }
 }

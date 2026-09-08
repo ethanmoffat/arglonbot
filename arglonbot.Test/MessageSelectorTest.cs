@@ -338,6 +338,8 @@ public class MessageSelectorTest
 
     [TestCase(EclipseEventType.Solar, "2024-04-08")]
     [TestCase(EclipseEventType.Solar, "2026-08-12")]
+    [TestCase(EclipseEventType.Solar, "2024-10-02")]
+    [TestCase(EclipseEventType.Solar, "2027-02-06")]
     [TestCase(EclipseEventType.Lunar, "2025-03-14")]
     public void TestEclipseRuleMatchesOnlyWithinTheNextTwentyFourHours(EclipseEventType type, DateTime eclipseDate)
     {
@@ -382,6 +384,48 @@ public class MessageSelectorTest
             Assert.That(result, Does.Contain("eastern Canada"));
             Assert.That(result, Does.Contain("https://www.openstreetmap.org/?mlat=25."));
         });
+    }
+
+    [TestCase(EclipseEventType.Solar, "2024-04-08", "total", "18:17", "Mexico")]
+    [TestCase(EclipseEventType.Solar, "2024-10-02", "annular", "18:44", "South America")]
+    [TestCase(EclipseEventType.Lunar, "2025-03-14", "total", "06:58", "the entire night side of Earth")]
+    public void TestEclipseTypeTokenExpandsAlongsideTimeLocationAndMap(EclipseEventType type, DateTime date, string kind, string peakTime, string location)
+    {
+        _messages.Add(new("{type} eclipse at {when} over {where}. Map: {map}", eclipse: type)
+        {
+            TokenReplacements = [
+                new("{type}", ReplacementType.EclipseType, "unknown"),
+                new("{when}", ReplacementType.EclipseTime, "?"),
+                new("{where}", ReplacementType.EclipseLocation, "?"),
+                new("{map}", ReplacementType.EclipseMap, "none")
+            ]
+        });
+        AddDefaultRule("default");
+
+        var result = CreateSelector().FindMessageForDateTime(ChannelInfo.None, DateTime.SpecifyKind(date, DateTimeKind.Utc));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(result, Does.StartWith($"{kind} eclipse at {peakTime} UTC over "));
+            Assert.That(result, Does.Contain(location));
+            Assert.That(result, Does.Not.Contain("{"));
+            Assert.That(result, type == EclipseEventType.Solar
+                ? Does.Contain("Map: https://www.openstreetmap.org/?mlat=")
+                : Does.EndWith("Map: none"));
+        });
+    }
+
+    [Test]
+    public void TestEclipseTypeTokenUsesConfiguredFallbackWithoutAnEclipseRule()
+    {
+        _messages.Add(new("Type: {type}")
+        {
+            TokenReplacements = [new("{type}", ReplacementType.EclipseType, "unknown")]
+        });
+
+        var result = CreateSelector().FindMessageForDateTime(ChannelInfo.None, new DateTime(2024, 10, 2));
+
+        Assert.That(result, Is.EqualTo("Type: unknown"));
     }
 
     [Test]

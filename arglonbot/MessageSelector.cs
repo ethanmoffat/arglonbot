@@ -200,6 +200,7 @@ public class MessageSelector : IMessageSelector
                     (MessageInfo.ReplacementType.YearsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.YearsSince()),
                     (MessageInfo.ReplacementType.MonthsSinceStart, true) => FormatNth(inputMessage.DateStart!.Value.MonthsSince()),
                     (MessageInfo.ReplacementType.EclipseLocation, _) => eclipse.Value?.Location ?? replacement.Value,
+                    (MessageInfo.ReplacementType.EclipseType, _) => eclipse.Value?.Kind.ToString().ToLowerInvariant() ?? replacement.Value,
                     (MessageInfo.ReplacementType.EclipseTime, _) => eclipse.Value == null
                         ? replacement.Value
                         : $"{eclipse.Value.PeakUtc:HH:mm} UTC",

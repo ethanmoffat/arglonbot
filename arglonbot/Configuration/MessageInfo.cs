@@ -20,7 +20,8 @@ public class MessageInfo()
         MonthsSinceStart,
         EclipseLocation,
         EclipseTime,
-        EclipseMap
+        EclipseMap,
+        EclipseType
     }
 
     public enum SeasonEvent

@@ -1,6 +1,7 @@
 using static arglonbot.Configuration.MessageInfo;
 
 using Moq;
+using CosineKitty;
 
 namespace arglonbot.Test;
 
@@ -10,25 +11,26 @@ public class EclipseResolverTest
     private readonly EclipseResolver _resolver = new(new EclipsePathResolver(), new RegionDescriber());
 
     // Real eclipse peak times (UTC).
-    [TestCase(EclipseEventType.Solar, "2024-04-08 00:00", "2024-04-08 18:17")] // total
-    [TestCase(EclipseEventType.Solar, "2026-08-12 00:00", "2026-08-12 17:45")] // total
-    [TestCase(EclipseEventType.Lunar, "2025-03-14 00:00", "2025-03-14 06:58")] // total
-    [TestCase(EclipseEventType.Lunar, "2025-09-07 00:00", "2025-09-07 18:11")] // partial
-    public void TestResolveReturnsPeakTimeAndLocationForUpcomingTotalEclipse(EclipseEventType type, DateTime time, DateTime expectedPeak)
+    [TestCase(EclipseEventType.Solar, "2024-04-08 00:00", "2024-04-08 18:17", EclipseKind.Total)]
+    [TestCase(EclipseEventType.Solar, "2026-08-12 00:00", "2026-08-12 17:45", EclipseKind.Total)]
+    [TestCase(EclipseEventType.Solar, "2024-10-02 00:00", "2024-10-02 18:45", EclipseKind.Annular)]
+    [TestCase(EclipseEventType.Lunar, "2025-03-14 00:00", "2025-03-14 06:58", EclipseKind.Total)]
+    [TestCase(EclipseEventType.Lunar, "2025-09-07 00:00", "2025-09-07 18:11", EclipseKind.Total)]
+    public void TestResolveReturnsKindPeakTimeAndLocationForUpcomingSupportedEclipse(EclipseEventType type, DateTime time, DateTime expectedPeak, EclipseKind expectedKind)
     {
         var result = _resolver.Resolve(type, DateTime.SpecifyKind(time, DateTimeKind.Utc));
 
         Assert.That(result, Is.Not.Null);
         Assert.That(result!.Type, Is.EqualTo(type));
+        Assert.That(result.Kind, Is.EqualTo(expectedKind));
         Assert.That(result.PeakUtc, Is.EqualTo(expectedPeak).Within(TimeSpan.FromMinutes(1)));
         Assert.That(result.Location, Is.Not.Empty);
     }
 
-    [TestCase(EclipseEventType.Solar, "2024-10-02 00:00", TestName = "TestAnnularSolarIsIgnored")]
     [TestCase(EclipseEventType.Solar, "2025-03-29 00:00", TestName = "TestPartialSolarIsIgnored")]
     [TestCase(EclipseEventType.Lunar, "2024-09-18 00:00", TestName = "TestPartialLunarIsIgnored")]
     [TestCase(EclipseEventType.Lunar, "2024-03-25 00:00", TestName = "TestPenumbralLunarIsIgnored")]
-    public void TestResolveReturnsNullForAnnularPartialAndPenumbralEclipses(EclipseEventType type, DateTime time)
+    public void TestResolveReturnsNullForPartialAndPenumbralEclipses(EclipseEventType type, DateTime time)
     {
         Assert.That(_resolver.Resolve(type, DateTime.SpecifyKind(time, DateTimeKind.Utc)), Is.Null);
     }

@@ -4,7 +4,7 @@ using static arglonbot.Configuration.MessageInfo;
 
 namespace arglonbot;
 
-public record EclipseDetails(EclipseEventType Type, DateTime PeakUtc, string Location, string MapUrl);
+public record EclipseDetails(EclipseEventType Type, DateTime PeakUtc, string Location, string MapUrl, EclipseKind Kind);
 
 public class EclipseResolver : IEclipseResolver
 {
@@ -45,7 +45,7 @@ public class EclipseResolver : IEclipseResolver
                 break;
             }
 
-            if (peak >= windowStart && eclipse.kind == EclipseKind.Total)
+            if (peak >= windowStart && eclipse.kind is EclipseKind.Total or EclipseKind.Annular)
             {
                 return BuildSolarDetails(eclipse, peak);
             }
@@ -66,7 +66,7 @@ public class EclipseResolver : IEclipseResolver
 
             if (peak >= windowStart && eclipse.kind == EclipseKind.Total)
             {
-                return new EclipseDetails(EclipseEventType.Lunar, peak, "the entire night side of Earth", string.Empty);
+                return new EclipseDetails(EclipseEventType.Lunar, peak, "the entire night side of Earth", string.Empty, eclipse.kind);
             }
         }
 
@@ -82,7 +82,7 @@ public class EclipseResolver : IEclipseResolver
             ? FormatCoordinates(eclipse.latitude, eclipse.longitude)
             : regions;
 
-        return new EclipseDetails(EclipseEventType.Solar, peak, location, MapUrl(eclipse.latitude, eclipse.longitude));
+        return new EclipseDetails(EclipseEventType.Solar, peak, location, MapUrl(eclipse.latitude, eclipse.longitude), eclipse.kind);
     }
 
     private static string FormatCoordinates(double latitude, double longitude)
