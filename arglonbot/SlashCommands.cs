@@ -89,13 +89,14 @@ public class SlashCommands : ApplicationCommandModule
         }
         else
         {
+            var utcDateTime = DateTime.SpecifyKind(dateTime, DateTimeKind.Utc);
             var channelInfo = _periodicOpenMouthSettings.Channels
                 .Where(x => x.GuildId == ctx.Channel.GuildId && x.ChannelId == ctx.Channel.Id)
                 .FirstOrDefault();
 
             await ctx.CreateResponseAsync(
                 InteractionResponseType.ChannelMessageWithSource,
-                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessageForDateTime(channelInfo ?? ChannelInfo.None, dateTime) }
+                new DiscordInteractionResponseBuilder { Content = _messageSelector.FindMessageForDateTime(channelInfo ?? ChannelInfo.None, utcDateTime) }
             );
         }
     }
