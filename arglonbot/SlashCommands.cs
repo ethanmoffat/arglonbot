@@ -7,8 +7,6 @@ using DSharpPlus.SlashCommands;
 
 using Microsoft.Extensions.Options;
 
-using static arglonbot.Configuration.PeriodicOpenMouthSettings;
-
 public class SlashCommands : ApplicationCommandModule
 {
     private readonly IMessageSelector _messageSelector;

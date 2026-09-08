@@ -1,7 +1,8 @@
 using System.Text;
+
 using arglonbot.Configuration;
+
 using Microsoft.Extensions.Configuration;
-using static arglonbot.Configuration.PeriodicOpenMouthSettings;
 
 namespace arglonbot.Test;
 
