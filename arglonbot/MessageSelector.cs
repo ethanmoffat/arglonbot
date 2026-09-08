@@ -158,14 +158,14 @@ public class MessageSelector : IMessageSelector
         };
     }
 
-    private static bool DoesWeekOfMonthMatch(WeekOfMonth weekOfMonth, DateTime time) => weekOfMonth switch
+    private static bool DoesWeekOfMonthMatch(WeekdayOccurrence weekOfMonth, DateTime time) => weekOfMonth switch
     {
-        WeekOfMonth.Last => DateTime.DaysInMonth(time.Year, time.Month) - time.Day <= 7,
-        _ => (WeekOfMonth)(time.Day / 7) == weekOfMonth,
+        WeekdayOccurrence.Last => DateTime.DaysInMonth(time.Year, time.Month) - time.Day < 7,
+        _ => (WeekdayOccurrence)((time.Day - 1) / 7) == weekOfMonth,
     };
 
-    private static bool DoesWeekOfIntervalMatch(WeekOfMonth weekOfMonth, TimeSpan howManyDays) =>
-        weekOfMonth != WeekOfMonth.Last && (int)weekOfMonth == (int)(howManyDays.TotalDays / 7);
+    private static bool DoesWeekOfIntervalMatch(WeekdayOccurrence weekOfMonth, TimeSpan howManyDays) =>
+        weekOfMonth != WeekdayOccurrence.Last && (int)weekOfMonth == (int)(howManyDays.TotalDays / 7);
 
     private static string PhaseName(int quarter) => quarter switch
     {

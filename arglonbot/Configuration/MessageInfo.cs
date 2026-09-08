@@ -32,10 +32,10 @@ public class MessageInfo()
         public DayOfWeek DayOfWeek { get; set; }
 
         [Required]
-        public WeekOfMonth WeekOfInterval { get; set; }
+        public WeekdayOccurrence WeekOfInterval { get; set; }
 
         [SetsRequiredMembers]
-        public AfterInfo(AfterType type, string value, DayOfWeek dayOfWeek, WeekOfMonth weekOfInterval)
+        public AfterInfo(AfterType type, string value, DayOfWeek dayOfWeek, WeekdayOccurrence weekOfInterval)
             : this()
         {
             Type = type;
@@ -73,7 +73,7 @@ public class MessageInfo()
         DateTime? dateEnd = default,
         Month? month = default,
         DayOfWeek? dayOfWeek = default,
-        WeekOfMonth? weekOfMonth = default,
+        WeekdayOccurrence? weekOfMonth = default,
         AfterInfo? after = null)
         : this()
     {
@@ -100,7 +100,7 @@ public class MessageInfo()
 
     public DayOfWeek? DayOfWeek { get; set; }
 
-    public WeekOfMonth? WeekOfMonth { get; set; }
+    public WeekdayOccurrence? WeekOfMonth { get; set; }
 
     [ValidateObjectMembers]
     public AfterInfo? After { get; set; } = null;

@@ -23,7 +23,7 @@ public class MessageSelectorTest
     }
 
     [Test]
-    public void TestDefaultRule()
+    public void TestMessageWithNoFiltersMatchesAnyDateAsDefault()
     {
         const string WrongMessage = "Happy Birthday!";
         const string ExpectedMessage = "12345";
@@ -39,7 +39,7 @@ public class MessageSelectorTest
     }
 
     [Test]
-    public void TestExactDate()
+    public void TestExactDateRuleMatchesOnlyThatDate()
     {
         const string Message = "Blaze itttt";
 
@@ -53,7 +53,7 @@ public class MessageSelectorTest
     }
 
     [Test]
-    public void TestNoMatchingRuleThrows()
+    public void TestNoMatchingRuleAndNoDefaultThrowsInvalidOperation()
     {
         const string Message = "Blaze itttt";
 
@@ -81,7 +81,7 @@ public class MessageSelectorTest
     }
 
     [TestCaseSource(nameof(DateRangeSource))]
-    public void TestDateRangeRule(DateTime date, bool matches)
+    public void TestDateRangeRuleMatchesOnlyDatesInclusivelyWithinRange(DateTime date, bool matches)
     {
         const string MatchMessage = "Advent!";
         const string NoMatchMessage = "default";
@@ -96,20 +96,57 @@ public class MessageSelectorTest
         Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo(matches ? MatchMessage : NoMatchMessage));
     }
 
-    [TestCase(Month.January, WeekOfMonth.Third, DayOfWeek.Monday, "2025-01-20")] // MLK day
-    [TestCase(Month.February, WeekOfMonth.Second, DayOfWeek.Tuesday, "2025-02-11")] // testing 'second'
-    [TestCase(Month.May, WeekOfMonth.Last, DayOfWeek.Monday, "2025-05-26")] // memorial day
-    [TestCase(Month.May, WeekOfMonth.Last, DayOfWeek.Monday, "2026-05-25")] // memorial day
-    [TestCase(Month.May, WeekOfMonth.Last, DayOfWeek.Monday, "2027-05-31")] // memorial day
-    [TestCase(Month.September, WeekOfMonth.First, DayOfWeek.Monday, "2025-09-01")] // labor day
-    [TestCase(Month.November, WeekOfMonth.Fourth, DayOfWeek.Thursday, "2025-11-27")] // thanksgiving
-    public void TestWeekOfMonthRule(Month month, WeekOfMonth week, DayOfWeek day, string goodDate)
+    // MLK day - 3rd Monday of January
+    [TestCase(Month.January, WeekdayOccurrence.Third, DayOfWeek.Monday, "2024-01-15")]
+    [TestCase(Month.January, WeekdayOccurrence.Third, DayOfWeek.Monday, "2025-01-20")]
+    [TestCase(Month.January, WeekdayOccurrence.Third, DayOfWeek.Monday, "2026-01-19")]
+    [TestCase(Month.January, WeekdayOccurrence.Third, DayOfWeek.Monday, "2027-01-18")]
+    // President's day - 3rd Monday of February
+    [TestCase(Month.February, WeekdayOccurrence.Third, DayOfWeek.Monday, "2024-02-19")]
+    [TestCase(Month.February, WeekdayOccurrence.Third, DayOfWeek.Monday, "2025-02-17")]
+    [TestCase(Month.February, WeekdayOccurrence.Third, DayOfWeek.Monday, "2026-02-16")]
+    [TestCase(Month.February, WeekdayOccurrence.Third, DayOfWeek.Monday, "2027-02-15")]
+    // Mother's day - 2nd Sunday of May
+    [TestCase(Month.May, WeekdayOccurrence.Second, DayOfWeek.Sunday, "2024-05-12")]
+    [TestCase(Month.May, WeekdayOccurrence.Second, DayOfWeek.Sunday, "2025-05-11")]
+    [TestCase(Month.May, WeekdayOccurrence.Second, DayOfWeek.Sunday, "2026-05-10")]
+    [TestCase(Month.May, WeekdayOccurrence.Second, DayOfWeek.Sunday, "2027-05-09")]
+    // Memorial day - last Monday of May
+    [TestCase(Month.May, WeekdayOccurrence.Last, DayOfWeek.Monday, "2024-05-27")]
+    [TestCase(Month.May, WeekdayOccurrence.Last, DayOfWeek.Monday, "2025-05-26")]
+    [TestCase(Month.May, WeekdayOccurrence.Last, DayOfWeek.Monday, "2026-05-25")]
+    [TestCase(Month.May, WeekdayOccurrence.Last, DayOfWeek.Monday, "2027-05-31")]
+    // Father's day - 3rd Sunday of June
+    [TestCase(Month.June, WeekdayOccurrence.Third, DayOfWeek.Sunday, "2024-06-16")]
+    [TestCase(Month.June, WeekdayOccurrence.Third, DayOfWeek.Sunday, "2025-06-15")]
+    [TestCase(Month.June, WeekdayOccurrence.Third, DayOfWeek.Sunday, "2026-06-21")]
+    [TestCase(Month.June, WeekdayOccurrence.Third, DayOfWeek.Sunday, "2027-06-20")]
+    // Labor day - 1st Monday of September
+    [TestCase(Month.September, WeekdayOccurrence.First, DayOfWeek.Monday, "2024-09-02")]
+    [TestCase(Month.September, WeekdayOccurrence.First, DayOfWeek.Monday, "2025-09-01")]
+    [TestCase(Month.September, WeekdayOccurrence.First, DayOfWeek.Monday, "2026-09-07")]
+    [TestCase(Month.September, WeekdayOccurrence.First, DayOfWeek.Monday, "2027-09-06")]
+    // Thanksgiving - 4th Thursday of November
+    [TestCase(Month.November, WeekdayOccurrence.Fourth, DayOfWeek.Thursday, "2024-11-28")]
+    [TestCase(Month.November, WeekdayOccurrence.Fourth, DayOfWeek.Thursday, "2025-11-27")]
+    [TestCase(Month.November, WeekdayOccurrence.Fourth, DayOfWeek.Thursday, "2026-11-26")]
+    [TestCase(Month.November, WeekdayOccurrence.Fourth, DayOfWeek.Thursday, "2027-11-25")]
+    // --- additional edge cases ---
+    [TestCase(Month.February, WeekdayOccurrence.Second, DayOfWeek.Tuesday, "2025-02-11")] // testing 'second'
+    [TestCase(Month.June, WeekdayOccurrence.First, DayOfWeek.Sunday, "2025-06-01")] // "first" occurrence on the 1st of the month
+    [TestCase(Month.March, WeekdayOccurrence.First, DayOfWeek.Saturday, "2025-03-01")] // first Saturday is the 1st
+    [TestCase(Month.January, WeekdayOccurrence.First, DayOfWeek.Wednesday, "2025-01-01")] // first day of the year
+    [TestCase(Month.August, WeekdayOccurrence.Last, DayOfWeek.Sunday, "2025-08-31")] // 5th Sunday == last Sunday
+    [TestCase(Month.May, WeekdayOccurrence.Fourth, DayOfWeek.Monday, "2025-05-26")] // 4th Monday of May 2025 is also the last (memorial day) - ensures Fourth still matches
+    [TestCase(Month.February, WeekdayOccurrence.Last, DayOfWeek.Saturday, "2025-02-22")] // last Saturday of a 28-day February
+    [TestCase(Month.December, WeekdayOccurrence.Last, DayOfWeek.Wednesday, "2025-12-31")] // last Wednesday on the 31st
+    public void TestWeekdayOccurrenceRuleMatchesRealHolidayDatesAndNotAdjacentWeeks(Month month, WeekdayOccurrence week, DayOfWeek day, string goodDate)
     {
         const string MatchMessage = "special holiday with weird semantics!";
         const string NoMatchMessage = "default";
 
         var matchDate = DateTime.Parse(goodDate);
-        var noMatchDate = matchDate.AddDays(1);
+        List<DateTime> noMatchDates = [matchDate.AddDays(1), matchDate.AddDays(7), matchDate.AddDays(-7)];
 
         AddWeekOfMonthRule(month, week, day, MatchMessage);
         AddDefaultRule(NoMatchMessage);
@@ -118,18 +155,57 @@ public class MessageSelectorTest
         Assert.Multiple(() =>
         {
             Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, matchDate), Is.EqualTo(MatchMessage));
-            Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, noMatchDate), Is.EqualTo(NoMatchMessage));
+
+            foreach (var noMatchDate in noMatchDates)
+                Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, noMatchDate), Is.EqualTo(NoMatchMessage));
         });
     }
 
-    [TestCase("2024-03-31", "2024-03-22", "2024-04-25", "FullMoon", WeekOfMonth.First, DayOfWeek.Sunday)] // easter 2024
-    [TestCase("2025-04-20", "2025-03-22", "2025-04-25", "FullMoon", WeekOfMonth.First, DayOfWeek.Sunday)] // easter 2025
-    [TestCase("2026-04-05", "2026-03-22", "2026-04-25", "FullMoon", WeekOfMonth.First, DayOfWeek.Sunday)] // easter 2026
-    [TestCase("2025-04-01", "2025-03-22", "2025-04-25", "NewMoon", WeekOfMonth.First, DayOfWeek.Tuesday)]
-    [TestCase("2025-04-08", "2025-03-22", "2025-04-25", "NewMoon", WeekOfMonth.Second, DayOfWeek.Tuesday)]
-    [TestCase("2025-04-12", "2025-03-22", "2025-04-25", "NewMoon", WeekOfMonth.Second, DayOfWeek.Saturday)]
-    [TestCase("2025-07-30", "2025-07-01", "2025-07-31", "FullMoon", WeekOfMonth.Third, DayOfWeek.Wednesday)]
-    public void TestMoonPhaseRule(DateTime matchDate, DateTime start, DateTime end, string moonPhase, WeekOfMonth weekAfter, DayOfWeek dayOfWeek)
+    [TestCase("NotAPhase")]
+    [TestCase("")]
+    public void TestMoonPhaseRuleWithUnrecognizedPhaseNameDoesNotMatch(string phase)
+    {
+        const string NoMatchMessage = "default";
+
+        var start = new DateTime(2025, 3, 21);
+        var end = new DateTime(2025, 4, 25);
+
+        AddMoonPhaseRule(start, end, phase, WeekdayOccurrence.First, DayOfWeek.Sunday, "moon-based holiday!");
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, new DateTime(2025, 4, 6)), Is.EqualTo(NoMatchMessage));
+    }
+
+    [TestCase("2025-03-23", "ThirdQuarter")] // quarter 2025-03-22 Sat
+    [TestCase("2025-03-30", "NewMoon")] // quarter 2025-03-29 Sat
+    [TestCase("2025-04-06", "FirstQuarter")] // quarter 2025-04-05 Sat
+    [TestCase("2025-04-14", "FullMoon")] // quarter 2025-04-13 Sun
+    public void TestMoonPhaseRuleResolvesEachOfTheFourQuarterNames(DateTime matchDate, string phase)
+    {
+        const string MatchMessage = "moon-based holiday!";
+
+        var start = new DateTime(2025, 3, 21);
+        var end = new DateTime(2025, 4, 30);
+
+        // The day after each phase always matches WeekdayOccurrence.First for that weekday.
+        AddMoonPhaseRule(start, end, phase, WeekdayOccurrence.First, matchDate.DayOfWeek, MatchMessage);
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, matchDate), Is.EqualTo(MatchMessage));
+    }
+
+    [TestCase("2024-03-31", "2024-03-21", "2024-04-25", "FullMoon", WeekdayOccurrence.First, DayOfWeek.Sunday)]
+    [TestCase("2025-04-20", "2025-03-21", "2025-04-25", "FullMoon", WeekdayOccurrence.First, DayOfWeek.Sunday)]
+    [TestCase("2026-04-05", "2026-03-21", "2026-04-25", "FullMoon", WeekdayOccurrence.First, DayOfWeek.Sunday)]
+    [TestCase("2025-04-01", "2025-03-21", "2025-04-25", "NewMoon", WeekdayOccurrence.First, DayOfWeek.Tuesday)]
+    [TestCase("2025-04-08", "2025-03-21", "2025-04-25", "NewMoon", WeekdayOccurrence.Second, DayOfWeek.Tuesday)]
+    [TestCase("2025-04-12", "2025-03-21", "2025-04-25", "NewMoon", WeekdayOccurrence.Second, DayOfWeek.Saturday)]
+    [TestCase("2025-07-30", "2025-07-01", "2025-07-31", "FullMoon", WeekdayOccurrence.Third, DayOfWeek.Wednesday)]
+    public void TestMoonPhaseRuleMatchesNthWeekdayAfterPhaseAndNotAdjacentDays(DateTime matchDate, DateTime start, DateTime end, string moonPhase, WeekdayOccurrence weekAfter, DayOfWeek dayOfWeek)
     {
         const string MatchMessage = "moon-based holiday!";
         const string NoMatchMessage = "default";
@@ -149,23 +225,6 @@ public class MessageSelectorTest
         });
     }
 
-    [Test]
-    public void TestDirectSubstitution()
-    {
-        const string Token = "{token}";
-        const string Format = $"This is a {Token} template!";
-        const string Replacement = "substituted";
-        const string MatchMessage = $"This is a {Replacement} template!";
-        const string NoMatchMessage = "This is the default message.";
-
-        AddDirectSubstitutionTokenReplacement(DateTime.Now.Date, Token, Replacement, Format);
-        AddDefaultRule(NoMatchMessage);
-
-        var messageSelector = CreateSelector();
-
-        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, DateTime.Now.Date), Is.EqualTo(MatchMessage));
-    }
-
     [TestCase(0, "th")]
     [TestCase(1, "st")]
     [TestCase(2, "nd")]
@@ -175,7 +234,7 @@ public class MessageSelectorTest
     [TestCase(69, "th")]
     [TestCase(101, "st")]
     [TestCase(1003, "rd")]
-    public void TestAnnualAnniversarySubstitution(int yearsAfter, string expectedSuffix)
+    public void TestYearsSinceStartTokenExpandsToOrdinalYearCount(int yearsAfter, string expectedSuffix)
     {
         const string Token = "{token}";
         const string Format = $"This is the {Token} anniversary!";
@@ -202,7 +261,7 @@ public class MessageSelectorTest
     [TestCase(69, "th")]
     [TestCase(101, "st")]
     [TestCase(1003, "rd")]
-    public void TestMonthlyAnniversarySubtitution(int monthsAfter, string expectedSuffix)
+    public void TestMonthsSinceStartTokenExpandsToOrdinalMonthCount(int monthsAfter, string expectedSuffix)
     {
         const string Token = "{token}";
         const string Format = $"This is the {Token} monthly anniversary!";
@@ -218,6 +277,90 @@ public class MessageSelectorTest
         var messageSelector = CreateSelector();
 
         Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, testDate), Is.EqualTo(MatchMessage));
+    }
+
+    [Test]
+    public void TestSubstituteTokenExpandsToConfiguredValue()
+    {
+        const string Token = "{token}";
+        const string Format = $"This is a {Token} template!";
+        const string Replacement = "substituted";
+        const string MatchMessage = $"This is a {Replacement} template!";
+        const string NoMatchMessage = "This is the default message.";
+
+        AddDirectSubstitutionTokenReplacement(DateTime.Now.Date, Token, Replacement, Format);
+        AddDefaultRule(NoMatchMessage);
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, DateTime.Now.Date), Is.EqualTo(MatchMessage));
+    }
+
+    [Test]
+    public void TestSubstituteTokenExpandsEveryOccurrenceInMessage()
+    {
+        const string Token = "{token}";
+        const string Format = $"{Token} and {Token} again";
+        const string Replacement = "x";
+
+        AddDirectSubstitutionTokenReplacement(DateTime.Now.Date, Token, Replacement, Format);
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, DateTime.Now.Date), Is.EqualTo("x and x again"));
+    }
+
+    [Test]
+    public void TestAllTokenReplacementsOnAMessageAreApplied()
+    {
+        var date = DateTime.Now.Date;
+        const string Format = "{first} then {second}";
+
+        _messages.Add(new(Format, date)
+        {
+            TokenReplacements = [
+                new("{first}", ReplacementType.Substitute, "one"),
+                new("{second}", ReplacementType.Substitute, "two")
+            ]
+        });
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo("one then two"));
+    }
+
+    [TestCase(ReplacementType.YearsSinceStart)]
+    [TestCase(ReplacementType.MonthsSinceStart)]
+    public void TestDateBasedTokenFallsBackToConfiguredValueWhenDateStartIsMissing(ReplacementType replacementType)
+    {
+        var date = DateTime.Now.Date;
+        const string Token = "{token}";
+        const string Fallback = "fallback";
+
+        _messages.Add(new($"value: {Token}", date)
+        {
+            TokenReplacements = [new(Token, replacementType, Fallback)]
+        });
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, date), Is.EqualTo($"value: {Fallback}"));
+    }
+
+    [Test]
+    public void TestBraceTextIsLeftIntactWhenMessageHasNoTokenReplacements()
+    {
+        const string Message = "no {token} here is replaced";
+
+        AddExactDateRule(DateTime.Now.Date, Message);
+        AddDefaultRule("default");
+
+        var messageSelector = CreateSelector();
+
+        Assert.That(messageSelector.FindMessageForDateTime(ChannelInfo.None, DateTime.Now.Date), Is.EqualTo(Message));
     }
 
     private IMessageSelector CreateSelector()
@@ -255,15 +398,12 @@ public class MessageSelectorTest
         _messages.Add(new(message, dateStart: start, dateEnd: end));
     }
 
-    private void AddWeekOfMonthRule(Month month, WeekOfMonth week, DayOfWeek dayOfWeek, string message)
+    private void AddWeekOfMonthRule(Month month, WeekdayOccurrence week, DayOfWeek dayOfWeek, string message)
     {
         _messages.Add(new(message, month: month, weekOfMonth: week, dayOfWeek: dayOfWeek));
     }
 
-    /// <summary>
-    /// Adds a rule for a date after the first given moon phase in a given interval, specified by how many weeks after and which day of the week.
-    /// </summary>
-    private void AddMoonPhaseRule(DateTime start, DateTime end, string moonPhase, WeekOfMonth weekAfter, DayOfWeek dayOfWeek, string message)
+    private void AddMoonPhaseRule(DateTime start, DateTime end, string moonPhase, WeekdayOccurrence weekAfter, DayOfWeek dayOfWeek, string message)
     {
         var afterInfo = new AfterInfo(AfterType.MoonPhase, moonPhase, dayOfWeek, weekAfter);
         _messages.Add(new(message, dateStart: start, dateEnd: end) { After = afterInfo });
