@@ -101,6 +101,19 @@ public class SlashCommands : ApplicationCommandModule
         }
     }
 
+    [SlashCommand("drunk", "Arglon says your text the way a drunk player would in Endless Online.")]
+    public async Task Drunk(
+        InteractionContext ctx,
+        [Option("text", "What Arglon should say.")] string text)
+    {
+        // Garbling can turn text into a mention, so nobody is pinged.
+        await ctx.CreateResponseAsync(
+            InteractionResponseType.ChannelMessageWithSource,
+            new DiscordInteractionResponseBuilder { Content = DrunkText.Make(text, Random.Shared) }
+                .AddMentions(Mentions.None)
+        );
+    }
+
     private static async Task<DiscordMessage?> GetMostRecentMessageFor(InteractionContext ctx, DiscordUser user)
     {
         var messages = await ctx.Channel.GetMessagesAsync().ConfigureAwait(false);
